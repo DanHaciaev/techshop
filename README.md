@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Шаблон интернет-магазина техники
 
-## Getting Started
+Next.js (App Router) + Prisma + SQLite. Готовый шаблон витрины с корзиной, оформлением заказа и админ-панелью — под свой логотип, название и цвета.
 
-First, run the development server:
+## Запуск
 
 ```bash
+npm install
+npm run db:reset   # создать SQLite базу и заполнить демо-данными (товары, категории, акции, магазины, admin)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Сайт: http://localhost:3000
+Админ-панель: http://localhost:3000/admin — логин **admin** / пароль **admin**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Структура
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `prisma/schema.prisma` — модели: Product, Category, Promotion, Store, Order, AdminUser, Settings.
+- `prisma/seed.ts` — демо-данные (перезаписывается через `npm run db:seed`).
+- `src/app` — страницы витрины (`/`, `/catalog`, `/product/[slug]`, `/promo/[slug]`, `/cart`, `/checkout`) и админки (`/admin/...`).
+- `src/lib/actions/*` — server actions для CRUD-операций в админке.
+- `src/lib/data.ts` — кэшируемые запросы к БД для витрины (ISR через `unstable_cache` + теги).
+- `src/app/api/og/*` — генератор картинок-заглушек для товаров и акций (замените на реальные фото).
 
-## Learn More
+## Что поменять под себя
 
-To learn more about Next.js, take a look at the following resources:
+1. **Название, логотип, цвет** — `/admin/settings`. Акцентный цвет применяется сразу в светлой и тёмной теме.
+2. **Товары, категории, акции, магазины, заказы** — соответствующие разделы `/admin`.
+3. **Пароль администратора** — по умолчанию `admin`/`admin`. Смените, отредактировав `prisma/seed.ts` (хэш через bcrypt) или напрямую в БД.
+4. **Валюта** — сейчас `lei` (Молдова), см. `formatPrice` в `src/lib/utils.ts`.
+5. **Секрет сессии** — переменная `AUTH_SECRET` в `.env`. Обязательно смените перед продакшеном.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Тема
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Светлая и тёмная тема на CSS-переменных в `src/app/globals.css` (`--primary`, `--background`, `--surface` и т.д.), переключаются через `next-themes`. Акцентный цвет из `/admin/settings` переопределяет `--primary` инлайн-стилем в `layout.tsx`.
 
-## Deploy on Vercel
+## Языки (русский / румынский)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Переключатель языка — в шапке сайта и в боковой панели админки. Реализовано без URL-префиксов (`/ru/...`, `/ro/...`) и без чтения cookie на сервере — иначе каталог/товары/акции потеряли бы статическую генерацию (см. ниже). Вместо этого:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Каждый переводимый текст рендерится в обоих языках сразу (компонент `<L ru="..." ro="..." />` в `src/i18n/l.tsx`), а CSS-правило в `globals.css` показывает нужный вариант по атрибуту `data-locale` на `<html>`.
+- Переключение языка — мгновенное, без перезагрузки страницы: клиентский код проставляет cookie `locale` и атрибут `data-locale`.
+- В админке (`/admin/...`) язык переключается так же, но там серверные компоненты читают cookie напрямую — это нормально, потому что все страницы админки и так рендерятся динамически (за авторизацией), в отличие от витрины.
+- Переводимые поля есть у Product, Category, Promotion, Store, Settings (поля с суффиксом `Ro`) — заполняются в соответствующих формах `/admin`.
+- Атрибуты, которые нельзя показать на двух языках одновременно (`<title>`, `alt`, `aria-label`), по умолчанию используют русский текст — это осознанное упрощение шаблона.
+
+## Продакшен
+
+```bash
+npm run build
+npm run start
+```
+
+Каталог, страницы товаров и акций — статические (ISR, ревалидация раз в минуту), админка — динамическая на каждый запрос.
+
+Локально используется SQLite-файл `prisma/dev.db`. Подключение к базе идёт через `@prisma/adapter-libsql` (`src/lib/prisma.ts`) — тот же код работает и с локальным файлом, и с Turso, меняется только `DATABASE_URL`.
+
+### Деплой на Vercel
+
+Vercel — serverless: файловая система только для чтения (кроме `/tmp`, который очищается между вызовами), поэтому обычный SQLite-файл **не переживёт** деплой — заказы и правки в админке будут "сбрасываться" между вызовами. Решение — **Turso (libSQL)**, SQLite-совместимая облачная база; переезд уже сделан (см. `src/lib/prisma.ts`), остаётся только:
+
+1. Создать базу: `turso db create <имя>`, получить URL: `turso db show <имя> --url`.
+2. Выпустить токен: `turso db tokens create <имя>`.
+3. В настройках проекта на Vercel добавить переменные окружения:
+   - `DATABASE_URL` = `libsql://...` (URL из шага 1)
+   - `TURSO_AUTH_TOKEN` = токен из шага 2
+   - `AUTH_SECRET` = свой случайный секрет (не тот, что в локальном `.env`)
+4. Применить схему к новой базе: `DATABASE_URL="libsql://..." TURSO_AUTH_TOKEN="..." npx prisma migrate deploy`.
+
+Для локальной разработки — текущая настройка (`DATABASE_URL="file:./dev.db"`, без токена) работает без изменений.
+
+## Оплата
+
+Сейчас в оформлении заказа — только выбор способа получения (доставка/самовывоз), без списания денег: заказ создаётся в статусе "Новый", оплата (наличные или картой) подтверждается менеджером/на месте. Приём оплаты картой через физический POS-терминал (Verifone-протокол для Victoriabank/MICB/Fincombank, либо Arcus2 для MAIB) требует отдельной интеграции с локальным агентом на кассовом ПК — зависит от того, терминал какого банка используется в конкретном магазине.

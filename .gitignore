@@ -39,3 +39,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# local SQLite dev database — never ship demo data, and it won't work as the
+# production DB on Vercel anyway (see README)
+prisma/dev.db
+prisma/dev.db-journal
+*.db
+*.db-journal
+
+# print-agent build output (built per-deployment, not source)
+print-agent/node_modules
+print-agent/dist
+print-agent/bundle.cjs
+print-agent/config.json
+print-agent/agent.log
+
+# AI editor tool scaffolding (auto-generated skill docs, not project code)
+.claude/
+.agents/
+.windsurf/

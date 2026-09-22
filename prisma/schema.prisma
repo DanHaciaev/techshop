@@ -1,0 +1,228 @@
+// Prisma schema for the electronics shop template
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  nameRo   String    @default("")
+  slug     String    @unique
+  order    Int       @default(0)
+  products Product[]
+
+  parentId String?
+  parent   Category?  @relation("CategoryChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryChildren")
+  filterDefinitions FilterDefinition[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  nameRo      String   @default("")
+  slug        String   @unique
+  description String   @default("")
+  descriptionRo String @default("")
+  price       Float
+  // Optional discounted price shown as the "old price" strike-through when set
+  oldPrice    Float?
+  image       String   @default("")
+  images      String   @default("[]") // JSON array of extra image URLs
+  sku         String   @default("")
+  stock       Int      @default(0)
+  featured    Boolean  @default(false)
+  active      Boolean  @default(true)
+  attributes  String   @default("[]") // JSON array of { name, nameRo, value, valueRo } spec rows shown on the product page
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  promotions   PromotionProduct[]
+  orderItems   OrderItem[]
+  storeStocks  StoreStock[]
+  reviews      Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  author    String
+  rating    Int
+  text      String   @default("")
+
+  createdAt DateTime @default(now())
+}
+
+// Governs which product attribute names show up as filter facets on catalog
+// pages, in what order, and whether they apply everywhere or only within one
+// top-level category. The actual filter VALUES are still read live from
+// whatever products are on screen — this only controls the facet list itself.
+model FilterDefinition {
+  id         String    @id @default(cuid())
+  name       String
+  nameRo     String    @default("")
+  order      Int       @default(0)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StoreStock {
+  id        String  @id @default(cuid())
+  productId String
+  storeId   String
+  quantity  Int     @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, storeId])
+}
+
+model Promotion {
+  id          String   @id @default(cuid())
+  title       String
+  titleRo     String   @default("")
+  slug        String   @unique
+  subtitle    String   @default("")
+  subtitleRo  String   @default("")
+  description String   @default("")
+  descriptionRo String @default("")
+  image       String   @default("") // banner image shown in the homepage carousel
+  badge       String   @default("") // e.g. "-20%", "Новинка"
+  badgeRo     String   @default("")
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  startsAt    DateTime?
+  endsAt      DateTime?
+
+  products PromotionProduct[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PromotionProduct {
+  id          String    @id @default(cuid())
+  promotionId String
+  productId   String
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, productId])
+}
+
+model Store {
+  id       String  @id @default(cuid())
+  name     String
+  nameRo   String  @default("")
+  address  String
+  addressRo String @default("")
+  city     String  @default("")
+  cityRo   String  @default("")
+  phone    String  @default("")
+  hours    String  @default("")
+  hoursRo  String  @default("")
+  lat      Float?
+  lng      Float?
+  active   Boolean @default(true)
+  order    Int     @default(0)
+  stocks   StoreStock[]
+  sellers  AdminUser[]
+  orders   Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  COMPLETED
+  CANCELED
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  customerName  String
+  customerPhone String
+  customerEmail String      @default("")
+  deliveryType  String      @default("delivery") // delivery | pickup
+  address       String      @default("")
+  storeId       String?
+  store         Store?      @relation(fields: [storeId], references: [id])
+  comment       String      @default("")
+  status        OrderStatus @default(NEW)
+  total         Float
+
+  // In-store POS sales ("pos") vs. the online storefront checkout ("online").
+  source        String    @default("online")
+  paymentMethod String    @default("") // "" | cash | card
+  paidAt        DateTime?
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String?
+  name      String
+  price     Float
+  quantity  Int
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+}
+
+enum AdminRole {
+  ADMIN
+  SELLER
+}
+
+model AdminUser {
+  id       String    @id @default(cuid())
+  username String    @unique
+  password String // hashed with bcrypt
+  role     AdminRole @default(ADMIN)
+
+  // Sellers are scoped to one physical store — they see its stock and run
+  // its till. Unused for ADMIN, who sees everything.
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Settings {
+  id        String @id @default("main")
+  shopName  String @default("TechShop")
+  logoUrl   String @default("")
+  phone     String @default("+373 22 000 000")
+  email     String @default("info@techshop.md")
+  address   String @default("")
+  addressRo String @default("")
+  themeMode String @default("system") // light | dark | system default for visitors
+  accentColor String @default("#2563eb")
+}

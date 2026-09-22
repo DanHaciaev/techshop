@@ -1,26 +1,152 @@
 @import "tailwindcss";
 
+/* next-themes toggles a `dark` class on <html> — wire Tailwind's dark: variant to it */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f9fc;
+  --surface: #ffffff;
+  --surface-muted: #eef2f9;
+  --foreground: #0f172a;
+  --muted: #5b6678;
+  --border: #e2e8f0;
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e8f0fe;
+
+  --accent: #0ea5e9;
+  --danger: #dc2626;
+  --success: #16a34a;
+
+  --radius: 0.875rem;
+}
+
+.dark {
+  --background: #0a1120;
+  --surface: #111a2e;
+  --surface-muted: #16213a;
+  --foreground: #eef2f9;
+  --muted: #93a1b8;
+  --border: #223052;
+
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-foreground: #071026;
+  --primary-soft: #16264a;
+
+  --accent: #38bdf8;
+  --danger: #f87171;
+  --success: #4ade80;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+
+  --radius-card: var(--radius);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+/* Smooth theme transition without flashing every element */
+body,
+body * {
+  transition-property: background-color, border-color, color;
+  transition-duration: 150ms;
+}
+
+[data-i18n="ro"] {
+  display: none;
+}
+[data-locale="ro"] [data-i18n="ru"] {
+  display: none;
+}
+[data-locale="ro"] [data-i18n="ro"] {
+  display: inline;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.animate-menu-in {
+  animation: menu-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.animate-drawer-in {
+  animation: drawer-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
