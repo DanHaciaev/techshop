@@ -11,7 +11,18 @@ import { formatPrice, cn } from "@/lib/utils";
 import { useDict, useLocale } from "@/i18n/locale-provider";
 import { pick } from "@/i18n/pick";
 
-export function CheckoutForm({ stores, stockByStore }: { stores: Store[]; stockByStore: Record<string, Record<string, number>> }) {
+export function CheckoutForm({
+  stores,
+  stockByStore,
+  trackedProductIds,
+  productStock,
+}: {
+  stores: Store[];
+  stockByStore: Record<string, Record<string, number>>;
+  trackedProductIds: string[];
+  productStock: Record<string, number>;
+}) {
+  const tracked = useMemo(() => new Set(trackedProductIds), [trackedProductIds]);
   const router = useRouter();
   const items = useCartStore((s) => s.items);
   const totalPrice = useCartStore((s) => s.totalPrice());
@@ -136,8 +147,9 @@ export function CheckoutForm({ stores, stockByStore }: { stores: Store[]; stockB
             <div className="mt-3 flex flex-col gap-1.5 rounded-lg border border-border p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-muted">{dict.checkout.storeStockHeading}</p>
               {items.map((item) => {
-                const qty = stockByStore[storeId]?.[item.productId] ?? 0;
-                const inStock = qty > 0;
+                const inStock = tracked.has(item.productId)
+                  ? (stockByStore[storeId]?.[item.productId] ?? 0) > 0
+                  : (productStock[item.productId] ?? 0) > 0;
                 return (
                   <div key={item.productId} className="flex items-center justify-between gap-3 text-sm">
                     <span className="min-w-0 flex-1 truncate text-foreground">{pick(item.name, item.nameRo, locale)}</span>
