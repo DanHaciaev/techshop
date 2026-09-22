@@ -1,6 +1,6 @@
 import path from "path";
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import bcrypt from "bcryptjs";
 
 // Mirrors src/lib/prisma.ts's own path handling: a relative "file:" URL is
@@ -17,7 +17,7 @@ function resolveDatabaseUrl(raw: string): string {
   return `file:${path.join(__dirname, relative)}`;
 }
 
-const adapter = new PrismaLibSql({
+const adapter = new PrismaLibSQL({
   url: resolveDatabaseUrl(process.env.DATABASE_URL!),
   authToken: process.env.TURSO_AUTH_TOKEN,
 });

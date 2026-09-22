@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "postinstall": "prisma generate",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force"
@@ -15,7 +16,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
-    "@prisma/adapter-libsql": "^7.10.0",
+    "@prisma/adapter-libsql": "6.19.3",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",

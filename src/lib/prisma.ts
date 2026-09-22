@@ -1,6 +1,6 @@
 import path from "path";
 import { PrismaClient } from "@prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaLibSQL } from "@prisma/adapter-libsql";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -22,7 +22,7 @@ function resolveDatabaseUrl(raw: string): string {
   return `file:${path.join(process.cwd(), "prisma", relative)}`;
 }
 
-const adapter = new PrismaLibSql({
+const adapter = new PrismaLibSQL({
   url: resolveDatabaseUrl(process.env.DATABASE_URL!),
   authToken: process.env.TURSO_AUTH_TOKEN,
 });

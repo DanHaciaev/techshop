@@ -20,6 +20,7 @@ const orderSchema = z.object({
   deliveryType: z.enum(["delivery", "pickup"]),
   address: z.string().trim().max(300).default(""),
   storeId: z.string().trim().max(60).optional().nullable(),
+  paymentMethod: z.enum(["on_site", "online"]).default("on_site"),
   comment: z.string().trim().max(500).default(""),
   items: z
     .array(
@@ -84,6 +85,7 @@ export async function POST(req: Request) {
           deliveryType: data.deliveryType,
           address: data.deliveryType === "delivery" ? data.address : "",
           storeId: data.deliveryType === "pickup" ? data.storeId : null,
+          paymentMethod: data.paymentMethod,
           comment: data.comment,
           total,
           items: { create: orderItems },

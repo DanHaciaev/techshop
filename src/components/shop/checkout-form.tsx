@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { PackageCheck, PackageX } from "lucide-react";
 import type { Store } from "@prisma/client";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice, cn } from "@/lib/utils";
 import { useDict, useLocale } from "@/i18n/locale-provider";
 import { pick } from "@/i18n/pick";
 
-export function CheckoutForm({ stores }: { stores: Store[] }) {
+export function CheckoutForm({ stores, stockByStore }: { stores: Store[]; stockByStore: Record<string, Record<string, number>> }) {
   const router = useRouter();
   const items = useCartStore((s) => s.items);
   const totalPrice = useCartStore((s) => s.totalPrice());
@@ -23,6 +24,7 @@ export function CheckoutForm({ stores }: { stores: Store[] }) {
 
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery");
   const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
+  const [paymentMethod, setPaymentMethod] = useState<"on_site" | "online">("on_site");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +47,7 @@ export function CheckoutForm({ stores }: { stores: Store[] }) {
           deliveryType,
           address: formData.get("address") ?? "",
           storeId: deliveryType === "pickup" ? storeId : null,
+          paymentMethod,
           comment: formData.get("comment") ?? "",
           items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
         }),
@@ -129,8 +132,56 @@ export function CheckoutForm({ stores }: { stores: Store[] }) {
                 </option>
               ))}
             </select>
+
+            <div className="mt-3 flex flex-col gap-1.5 rounded-lg border border-border p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted">{dict.checkout.storeStockHeading}</p>
+              {items.map((item) => {
+                const qty = stockByStore[storeId]?.[item.productId] ?? 0;
+                const inStock = qty > 0;
+                return (
+                  <div key={item.productId} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="min-w-0 flex-1 truncate text-foreground">{pick(item.name, item.nameRo, locale)}</span>
+                    <span className={cn("flex shrink-0 items-center gap-1", inStock ? "text-success" : "text-danger")}>
+                      {inStock ? <PackageCheck size={14} /> : <PackageX size={14} />}
+                      {inStock ? dict.checkout.itemInStock : dict.checkout.itemOutOfStock}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-foreground">{dict.checkout.paymentMethod}</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod("on_site")}
+              className={cn(
+                "rounded-lg border px-4 py-3 text-sm font-medium transition-colors",
+                paymentMethod === "on_site"
+                  ? "border-primary bg-primary-soft text-primary"
+                  : "border-border bg-surface text-foreground hover:bg-surface-muted"
+              )}
+            >
+              {dict.checkout.paymentOnSite}
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod("online")}
+              className={cn(
+                "rounded-lg border px-4 py-3 text-sm font-medium transition-colors",
+                paymentMethod === "online"
+                  ? "border-primary bg-primary-soft text-primary"
+                  : "border-border bg-surface text-foreground hover:bg-surface-muted"
+              )}
+            >
+              {dict.checkout.paymentOnline}
+            </button>
+          </div>
+          {paymentMethod === "online" ? <p className="mt-2 text-xs text-muted">{dict.checkout.paymentOnlineNote}</p> : null}
+        </div>
 
         <div>
           <label className="mb-2 block text-sm font-medium text-foreground">{dict.checkout.comment}</label>

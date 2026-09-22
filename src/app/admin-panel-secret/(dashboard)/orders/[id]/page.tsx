@@ -70,6 +70,7 @@ export default async function AdminOrderDetailPage({
                   value={store ? `${pick(store.name, store.nameRo, locale)}, ${pick(store.address, store.addressRo, locale)}` : "—"}
                 />
               )}
+              {order.paymentMethod ? <Row label={t.paymentMethod} value={t.paymentLabel(order.paymentMethod)} /> : null}
               <Row
                 label={t.createdAt}
                 value={new Date(order.createdAt).toLocaleString(dateLocale, { dateStyle: "medium", timeStyle: "short" })}
